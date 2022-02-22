@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 #programa para listar o tipo de intancias em uma conta
+# precise que voce passe o nome do profile da conta
 
 import boto3
 from botocore.config import Config
