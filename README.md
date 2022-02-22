@@ -13,7 +13,7 @@ A ideia desse script é fazer uma varredura no EC2 em todas as regiões e retorn
 
 Para utilizar o script:
 
-python3 aws-py-ec2-describe.py -p <profile>
+python3 aws-py-ec2-describe.py -p <[profile]>
   
 exemplo:
 ```
