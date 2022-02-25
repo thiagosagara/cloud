@@ -1,3 +1,5 @@
+#dev by leandro damascena
+
 import functools
 import platform
 import traceback
