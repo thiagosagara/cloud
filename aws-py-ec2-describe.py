@@ -18,13 +18,25 @@ def list_region(region, get_profile):
  
  for r in response['Reservations']:
   for i in r['Instances']:
+   if "InstanceLifecycle" in i and "Platform" in i:
+    instancelifecycle = i['InstanceLifecycle']
+    platform = i['Platform']
+   elif "Platform" in i:
+    instancelifecycle = "ondemand"
+    platform = i['Platform']
+   elif "InstanceLifecycle" in i:
+    instancelifecycle = i['InstanceLifecycle']
+    platform = "linux/unix"
+   else:
+    instancelifecycle = "ondemand"
+    platform = "linux/unix"
+   
    if "Tags" in i:
     for t in i['Tags']:
      if t['Key'] == 'Name':
-      print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{t['Value']},{i['State']['Name']}")
-   
-   else:
-    print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},Sem Hostname,{i['State']['Name']}")
+      print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},{t['Value']},{i['State']['Name']}")
+   else: 
+    print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']}")
  
  return
 
@@ -32,7 +44,7 @@ def list_region(region, get_profile):
 def get_regions():
    session = boto3.session.Session(profile_name = str(gprofile))
    #ROADMAP - Passar isso para uma funcao
-   print("account","region","instanceid","instancetype","hostname","state",sep=",")
+   print("account","region","instanceid","instancetype","lifecycle","platform","hostname","state",sep=",")
    client = session.client('ec2')
    regions = client.describe_regions()
    
@@ -48,7 +60,7 @@ if __name__ == '__main__':
 
    try:
       #Limpa a tela
-      os.system('cls' if os.name == 'nt' else 'clear')
+      #os.system('cls' if os.name == 'nt' else 'clear')
 
       #ArgParse
       parser = argparse.ArgumentParser(
