@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
-#programa para listar o tipo de intancias em uma conta
-# precise que voce passe o nome do profile da conta
+# Programa para listar o tipo de intancias em uma conta
+#
+#  Voce passa o profile da conta (-p) e ele vai coletar:
+#
+#  -- Conta, Regiao, ID da instancia, Tipo da instancia, Lifecycle, Plataforma, Hostname e Status
+
 
 import boto3
 import os
