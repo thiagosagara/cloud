@@ -8,6 +8,8 @@ A ideia desse script é fazer uma varredura no EC2 em todas as regiões e retorn
 - Região;
 - Id da instancia;
 - Tipo da instancia;
+- Lifecycle (se é spot, ondemand ou reserved);
+- Platform (windows/linux/unix);
 - Tag Name;
 - Estado da instancia
 
