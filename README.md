@@ -12,6 +12,7 @@ A ideia desse script é fazer uma varredura no EC2 em todas as regiões e retorn
 - Platform (windows/linux/unix);
 - Tag Name;
 - Estado da instancia
+- Todas as TAGs em lista
 
 Para utilizar o script:
 
