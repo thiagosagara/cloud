@@ -21,7 +21,7 @@ def exception(func):
             message = "\nO serviço {} não existe nessa região".format(
                     func.__qualname__
                 )
-            print(message)
+            #print(message)
         
         except botocore.exceptions.ProfileNotFound as e:
             message = "\nO profile informado não existe"
