@@ -34,13 +34,29 @@ def list_region(region, get_profile):
    else:
     instancelifecycle = "ondemand"
     platform = "linux/unix"
-   
+  
    if "Tags" in i:
+    tagkeys = []
+    tagall = []
     for t in i['Tags']:
-     if t['Key'] == 'Name':
-      print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},{t['Value']},{i['State']['Name']}")
-   else: 
-    print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']}")
+     kv = t['Key']+":"+t['Value']
+     tagkeys.append(t['Key'])
+     tagall.append(kv)
+    
+    if 'Name' in tagkeys:
+     for t in i['Tags']:
+      if t['Key'] == 'Name':
+       print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},{t['Value']},{i['State']['Name']},{tagall}")
+    else: 
+     print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']},{tagall}")
+ 
+ 
+# ec2 = boto3.resource('ec2')
+#
+#for instance in ec2.instances.all():
+#        print (instance.tags)
+#        for tag in instance.tags:
+#                print(tag['Value'])
  
  return
 
@@ -48,7 +64,7 @@ def list_region(region, get_profile):
 def get_regions():
    session = boto3.session.Session(profile_name = str(gprofile))
    #ROADMAP - Passar isso para uma funcao
-   print("account","region","instanceid","instancetype","lifecycle","platform","hostname","state",sep=",")
+   print("account","region","instanceid","instancetype","lifecycle","platform","hostname","state","tags",sep=",")
    client = session.client('ec2')
    regions = client.describe_regions()
    
