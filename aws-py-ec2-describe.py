@@ -56,19 +56,11 @@ def list_region(region, get_profile):
    else:   
     print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']},Sem Tags")
  
-# ec2 = boto3.resource('ec2')
-#
-#for instance in ec2.instances.all():
-#        print (instance.tags)
-#        for tag in instance.tags:
-#                print(tag['Value'])
- 
  return
 
 @exception
 def get_regions():
    session = boto3.session.Session(profile_name = str(gprofile))
-   #ROADMAP - Passar isso para uma funcao
    print("account","region","instanceid","instancetype","lifecycle","platform","hostname","state","tags",sep=",")
    client = session.client('ec2')
    regions = client.describe_regions()
