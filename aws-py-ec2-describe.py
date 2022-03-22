@@ -35,6 +35,7 @@ def list_region(region, get_profile):
     instancelifecycle = "ondemand"
     platform = "linux/unix"
   
+  
    if "Tags" in i:
     tagkeys = []
     tagall = []
@@ -49,7 +50,8 @@ def list_region(region, get_profile):
        print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},{t['Value']},{i['State']['Name']},{tagall}")
     else: 
      print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']},{tagall}")
- 
+   else:   
+    print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']},Sem Tags")
  
 # ec2 = boto3.resource('ec2')
 #
