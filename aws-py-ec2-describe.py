@@ -44,12 +44,15 @@ def list_region(region, get_profile):
      tagkeys.append(t['Key'])
      tagall.append(kv)
     
+    tagall.sort()
+    ptag = ",".join(tagall)
+    
     if 'Name' in tagkeys:
      for t in i['Tags']:
       if t['Key'] == 'Name':
-       print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},{t['Value']},{i['State']['Name']},{tagall}")
+       print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},{t['Value']},{i['State']['Name']},{ptag}")
     else: 
-     print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']},{tagall}")
+     print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']},{ptag}")
    else:   
     print(f"{get_profile},{region},{i['InstanceId']},{i['InstanceType']},{instancelifecycle},{platform},Sem Hostname,{i['State']['Name']},Sem Tags")
  
