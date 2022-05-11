@@ -30,7 +30,7 @@ def list_rds(region, gprofile):
 
   print(
 f"\
-{str(gprofile).lower},\
+{gprofile},\
 {region},\
 {db_name},\
 {db_instance_type},\
