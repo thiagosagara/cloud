@@ -1,4 +1,7 @@
 # Byte-compiled / optimized / DLL files
+*.ovpn
 __pycache__/
 *.py[cod]
 *$py.class
+profiles
+Clientes/
