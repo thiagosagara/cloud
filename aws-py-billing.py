@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
-# Programa para listar o tipo de intancias em uma conta
+# Programa para realizar analise de billing em contas
 #
-#  Voce passa o profile da conta (-p) e ele vai coletar:
+#  Voce passa o profile da conta (-p) ou o arquivo com varios profiles (-f) e ele coleta:
 #
-#  -- Conta, Regiao, ID da instancia, Tipo da instancia, Lifecycle, Plataforma, Hostname e Status
+#  -- valor total do billing da conta;
+#  -- valor total por serviços;
+#  -- comparação com o ultimo mes;
+#
+# Pedacos do codigo vieram do site linuxtut.com (https://www.linuxtut.com/en/e602bb5d3a4950f92dfa/)
 
 
 import boto3
@@ -12,13 +16,61 @@ import os
 import argparse
 import sys
 from error_handler import exception
-
+from datetime import datetime, timedelta, date
+from pprint import pprint
 
 @exception
-def list_billing(region, get_profile):
- session = boto3.session.Session(profile_name = str(gprofile), region_name = region)
+def get_begin_of_month(pshow) -> str:
+
+ if pshow == 1:
+  colorlog('DEBUG: {}'.format(date.today().replace(day=1).isoformat()), 'info')
+
+ return date.today().replace(day=1).isoformat()
+
+@exception
+def get_last_month(pshow) -> str:
+ prev = date.today().replace(day=1) - timedelta(days=1)
+ 
+ if pshow == 1:
+  colorlog('DEBUG: {}'.format(prev.replace(day=1)), 'info')
+
+ return prev.replace(day=1)
+
+@exception
+def get_today(pshow) -> str:
+
+ if pshow == 1:
+  colorlog('DEBUG: {}'.format(date.today().isoformat()), 'info')
+
+ return date.today().isoformat()
+
+@exception
+def get_total_cost_date_range(pshow) -> str:
+ start_date = get_begin_of_month(pshow)
+ end_date = get_today(pshow)
+
+ if pshow == 1:
+  colorlog('DEBUG: inicio: {}, final: {}'.format(start_date, end_date), 'info')
+
+#trata se a data inicial for a mesma da final (1º dia do mes)
+ if start_date == end_date:
+  end_of_month = datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=-1)
+  begin_of_month = end_of_month.replace(day=1)
+  
+  if pshow == 1:
+   colorlog('DEBUG: inicio:{}, final:{}'.format(begin_of_month.date().isoformat(), end_of_month), 'info')
+
+  return begin_of_month.date().isoformat(), end_date
+
+ return start_date, end_date
+
+@exception
+def list_billing(gprofile, pshow) -> dict:
+ session = boto3.session.Session(profile_name = str(gprofile))
  conn=session.client('ce')
  
+ start_date, end_date = get_total_cost_date_range(pshow)
+
  response = conn.get_cost_and_usage(
   TimePeriod={
    'Start': start_date,
@@ -29,38 +81,43 @@ def list_billing(region, get_profile):
     'AmortizedCost'
    ]
  )
-    
+
+ if pshow == 1:
+  colorlog('DEBUG: response...', 'info')
+  pprint(response)
+  colorlog('DEBUG: format...', 'info')
+  print(f"\
+{gprofile},\
+{response['ResultsByTime'][0]['TimePeriod']['Start']},\
+{response['ResultsByTime'][0]['TimePeriod']['End']},\
+{response['ResultsByTime'][0]['Total']['AmortizedCost']['Amount']}\
+   ")
+
+ print(f"\
+{gprofile},\
+{response['ResultsByTime'][0]['TimePeriod']['Start']},\
+{response['ResultsByTime'][0]['TimePeriod']['End']},\
+{response['ResultsByTime'][0]['Total']['AmortizedCost']['Amount']}\
+  ")
+
  return {
   'start': response['ResultsByTime'][0]['TimePeriod']['Start'],
   'end': response['ResultsByTime'][0]['TimePeriod']['End'],
   'billing': response['ResultsByTime'][0]['Total']['AmortizedCost']['Amount'],
  }
 
-
- #print(
- # f" \
- # {get_profile}, \
- # {region}, \
- # {i['InstanceId']},\
- # {i['InstanceType']},\
- # {instancelifecycle},\
- # {platform},\
- # {t['Value']},\
- # {i['State']['Name']},\
- # {ptag}"
- #)
+def colorlog ( log, color ) -> dict:
+ if color == 'info':    printype = "|  \033[1;33mINFO\033[m    |"
+ elif color == 'error': printype = "|  \033[1;31mERROR\033[m   |"
+ else:                  printype = "|  \033[1;32mSUCCESS\033[m |"
+ timest = datetime.now()
+  
+ print("{0}{1} |  {2}".format(printype,timest.strftime('%Y/%m/%d_%H:%M:%S'),log))  
  
-# return
-
-@exception
-def get_regions():
- session = boto3.session.Session(profile_name = str(gprofile))
- print("account","region","instanceid","instancetype","lifecycle","platform","hostname","state","tags",sep=",")
- client = session.client('ce')
- regions = client.describe_regions()
- 
- for i in regions['Regions']:
-  list_billing(i['RegionName'], gprofile)
+ return {
+  'timestamp':timest.strftime('%Y/%m/%d_%H:%M:%S'),
+  'log':log
+ }
 
 
 #==============================================================================
@@ -75,7 +132,7 @@ if __name__ == '__main__':
 
       #ArgParse
   parser = argparse.ArgumentParser(
-                        description = 'Modulo para coleta de informacoes em instancias EC2',
+                        description = 'Modulo para coleta de informacoes em billing',
                         prog ='Jarvis do Sagara',
                         epilog = 'Contato: thiagosagara@gmail.com\n')
 
@@ -86,7 +143,7 @@ if __name__ == '__main__':
 
   parser.add_argument('-p','--profile', action='store',
                         dest='gprofile',default = 'Sandbox',
-                        required = True,
+                        required = False,
                         help = 'Digite o nome do profile (~/.aws/credentials)')
                         
   parser.add_argument('-d','--debug', action='store', type=int,
@@ -94,7 +151,7 @@ if __name__ == '__main__':
                         required = False,
                         help = 'adicione -d 1 para mostrar em modo debug')
 
-      #Instancia das opcoes
+  #Instancia das opcoes
 
   gfile=parser.parse_args().gfile
   gprofile=parser.parse_args().gprofile
@@ -103,9 +160,16 @@ if __name__ == '__main__':
       # --------------- Processo em caso de arquivo com os ICs ------------
       # Valida se foi passado o argumento de arquivo
   if gfile != "notdefined":
-   quit("Feature em desenvolvimento")
+   profiles = open(gfile)
+   print("custumer","start","end","totalbilling",sep=",")
+   for profile in profiles:
+    profile = profile.strip()
+    list_billing(profile, pshow)
+
   else:
-   get_regions()
+   print("custumer","start","end","totalbilling",sep=",")
+   list_billing(gprofile, pshow)
+
  except KeyboardInterrupt:
   print("Finalizando o script a pedido do user...")
   sys.exit(0)
