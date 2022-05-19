@@ -10,7 +10,6 @@
 #
 # Pedacos do codigo vieram do site linuxtut.com (https://www.linuxtut.com/en/e602bb5d3a4950f92dfa/)
 
-
 import boto3
 import os
 import argparse
@@ -18,9 +17,11 @@ import sys
 from error_handler import exception
 from datetime import datetime, timedelta, date
 from pprint import pprint
+from calendar import monthrange
+
 
 @exception
-def get_begin_of_month(pshow) -> str:
+def get_begin_of_month() -> str:
 
  if pshow == 1:
   colorlog('DEBUG: {}'.format(date.today().replace(day=1).isoformat()), 'info')
@@ -28,16 +29,21 @@ def get_begin_of_month(pshow) -> str:
  return date.today().replace(day=1).isoformat()
 
 @exception
-def get_last_month(pshow) -> str:
- prev = date.today().replace(day=1) - timedelta(days=1)
+def get_last_month() -> str:
+ #pega o primeiro dia do ultimo mes
+ lstart_date = date.today().replace(day=1) - timedelta(days=1)
+ lstart_date = lstart_date.replace(day=1)
+
+ #pega o ultimo dia do ultimo mes
+ lend_date = date(int(lstart_date.strftime("%Y")), int(lstart_date.strftime("%m")), monthrange(int(lstart_date.strftime("%Y")), int(lstart_date.strftime("%m")))[1])
  
  if pshow == 1:
-  colorlog('DEBUG: {}'.format(prev.replace(day=1)), 'info')
+  colorlog('DEBUG: start: {}, end: {}'.format(lstart_date, lend_date), 'info')
 
- return prev.replace(day=1)
+ return lstart_date, lend_date
 
 @exception
-def get_today(pshow) -> str:
+def get_today() -> str:
 
  if pshow == 1:
   colorlog('DEBUG: {}'.format(date.today().isoformat()), 'info')
@@ -45,9 +51,15 @@ def get_today(pshow) -> str:
  return date.today().isoformat()
 
 @exception
-def get_total_cost_date_range(pshow) -> str:
- start_date = get_begin_of_month(pshow)
- end_date = get_today(pshow)
+def get_total_cost_date_range(gstart=True, gend=True) -> str:
+ global start_date
+ global end_date
+ if gstart == True:
+  start_date = get_begin_of_month()
+  end_date = get_today()
+ else:
+  start_date = gstart
+  end_date = gend  
 
  if pshow == 1:
   colorlog('DEBUG: inicio: {}, final: {}'.format(start_date, end_date), 'info')
@@ -59,51 +71,94 @@ def get_total_cost_date_range(pshow) -> str:
   
   if pshow == 1:
    colorlog('DEBUG: inicio:{}, final:{}'.format(begin_of_month.date().isoformat(), end_of_month), 'info')
-
+  
   return begin_of_month.date().isoformat(), end_date
-
+ 
  return start_date, end_date
 
 @exception
-def list_billing(gprofile, pshow) -> dict:
- session = boto3.session.Session(profile_name = str(gprofile))
- conn=session.client('ce')
- 
- start_date, end_date = get_total_cost_date_range(pshow)
+def get_total_billing(gstart=True, gend=True) -> dict:
+ if gstart == True:
+  start_date, end_date = get_total_cost_date_range()
+ else:
+  start_date, end_date = get_total_cost_date_range(str(gstart), str(gend))
 
- response = conn.get_cost_and_usage(
+ response = gconn.get_cost_and_usage(
   TimePeriod={
    'Start': start_date,
    'End': end_date
   },
   Granularity='MONTHLY',
-   Metrics=[
-    'AmortizedCost'
-   ]
+  Metrics=['AmortizedCost']
  )
+ 
+ total_billing = round(float(response['ResultsByTime'][0]['Total']['AmortizedCost']['Amount']),2)
+ 
+ if pshow == 1:
+  colorlog('DEBUG: StartTime: {}'.format(start_date), 'info')
+  colorlog('DEBUG: EndTime: {}'.format(end_date), 'info')
+  colorlog('DEBUG: TotalBilling: {}'.format(total_billing), 'info')
+  colorlog('DEBUG: reponse...', 'info')
+  pprint(response)
 
+ return { 'total':{'total':total_billing } }
+ 
+@exception
+def get_service_billing() -> dict:
+ start_date, end_date = get_total_cost_date_range()
+ 
+ response = gconn.get_cost_and_usage(
+  TimePeriod={
+   'Start': start_date,
+   'End': end_date
+  },
+  Granularity='MONTHLY',
+  Metrics=['AmortizedCost'],
+  GroupBy=[{
+   'Type':'DIMENSION',
+   'Key':'SERVICE'
+  }]
+ )
+ 
+ services_billing = {}
+
+ for item in response['ResultsByTime'][0]['Groups']:
+  service = {
+   'name': item['Keys'][0],
+   'billing': round(float(item['Metrics']['AmortizedCost']['Amount']),2)
+  }
+
+  services_billing[service['name']] = service
+  
  if pshow == 1:
   colorlog('DEBUG: response...', 'info')
   pprint(response)
-  colorlog('DEBUG: format...', 'info')
-  print(f"\
-{gprofile},\
-{response['ResultsByTime'][0]['TimePeriod']['Start']},\
-{response['ResultsByTime'][0]['TimePeriod']['End']},\
-{response['ResultsByTime'][0]['Total']['AmortizedCost']['Amount']}\
-   ")
+  colorlog('DEBUG: services...', 'info')
+  pprint(services_billing)
 
- print(f"\
-{gprofile},\
-{response['ResultsByTime'][0]['TimePeriod']['Start']},\
-{response['ResultsByTime'][0]['TimePeriod']['End']},\
-{response['ResultsByTime'][0]['Total']['AmortizedCost']['Amount']}\
-  ")
+ return services_billing
+
+#em desenvolvimento
+def main_process(customer) -> dict:
+ 
+ cur_total_billing = get_total_billing()
+ #cur_service_billing = get_service_billing()
+ 
+ lstart_date, lend_date = get_last_month()
+ last_total_billing = get_total_billing(lstart_date, lend_date)
+
+ #for k, v in cur_service_billing.items():
+  #print(f"{customer},{start_date},{end_date},{k},{v['billing']},last,current")
+
+ for ck, cv in cur_total_billing.items():
+  for lk, lv in last_total_billing.items():
+   print(f"{customer},{start_date},{end_date},{ck},{cv['total']},{lv['total']},same")
 
  return {
-  'start': response['ResultsByTime'][0]['TimePeriod']['Start'],
-  'end': response['ResultsByTime'][0]['TimePeriod']['End'],
-  'billing': response['ResultsByTime'][0]['Total']['AmortizedCost']['Amount'],
+  'customer': gprofile,
+  'start':'carlos',
+  'end':'adao',
+  'totalbilling':'mais_de_8000'
  }
 
 def colorlog ( log, color ) -> dict:
@@ -127,10 +182,10 @@ def colorlog ( log, color ) -> dict:
 if __name__ == '__main__':
 
  try:
-      #Limpa a tela
-      #os.system('cls' if os.name == 'nt' else 'clear')
+  #Limpa a tela
+  #os.system('cls' if os.name == 'nt' else 'clear')
 
-      #ArgParse
+  #ArgParse
   parser = argparse.ArgumentParser(
                         description = 'Modulo para coleta de informacoes em billing',
                         prog ='Jarvis do Sagara',
@@ -145,30 +200,51 @@ if __name__ == '__main__':
                         dest='gprofile',default = 'Sandbox',
                         required = False,
                         help = 'Digite o nome do profile (~/.aws/credentials)')
-                        
+
+  parser.add_argument('-m','--lastmonth', action='store',
+                        dest='gmonth',default = 'lastmonth',
+                        required = False,
+                        help = 'compara com o ultimo mes')
+
+  parser.add_argument('-c','--currentmonth', action='store',
+                        dest='gcurm',default = 'currentmonth',
+                        required = False,
+                        help = 'compara no mes atual')
+
+
   parser.add_argument('-d','--debug', action='store', type=int,
                         dest='pshow', default = 0,
                         required = False,
                         help = 'adicione -d 1 para mostrar em modo debug')
 
-  #Instancia das opcoes
+  #Instancia as opcoes
 
   gfile=parser.parse_args().gfile
   gprofile=parser.parse_args().gprofile
   pshow=parser.parse_args().pshow
+  gcurm=parser.parse_args().gcurm
+  gmonth=parser.parse_args().gmonth
 
-      # --------------- Processo em caso de arquivo com os ICs ------------
-      # Valida se foi passado o argumento de arquivo
+  # --------------- Processo em caso de arquivo com os Profiles ------------
+  # Valida se foi passado o argumento de arquivo
   if gfile != "notdefined":
    profiles = open(gfile)
-   print("custumer","start","end","totalbilling",sep=",")
+   print("custumer","startdate","enddate","servicename","currentbilling","lastbilling","correlation",sep=",")
    for profile in profiles:
     profile = profile.strip()
-    list_billing(profile, pshow)
+    
+    session = boto3.session.Session(profile_name = str(profile))
+    gconn=session.client('ce')
+
+    main_process(profile)
 
   else:
-   print("custumer","start","end","totalbilling",sep=",")
-   list_billing(gprofile, pshow)
+   print("custumer","startdate","enddate","servicename","currentbilling","lastbilling","correlation",sep=",")
+   
+   session = boto3.session.Session(profile_name = str(gprofile))
+   gconn=session.client('ce')
+   
+   main_process(gprofile)
 
  except KeyboardInterrupt:
   print("Finalizando o script a pedido do user...")
