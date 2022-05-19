@@ -24,7 +24,7 @@ from calendar import monthrange
 def get_begin_of_month() -> str:
 
  if pshow == 1:
-  colorlog('DEBUG: {}'.format(date.today().replace(day=1).isoformat()), 'info')
+  colorlog('get_begin_of_month | DEBUG: {}'.format(date.today().replace(day=1).isoformat()), 'info')
 
  return date.today().replace(day=1).isoformat()
 
@@ -38,7 +38,7 @@ def get_last_month() -> str:
  lend_date = date(int(lstart_date.strftime("%Y")), int(lstart_date.strftime("%m")), monthrange(int(lstart_date.strftime("%Y")), int(lstart_date.strftime("%m")))[1])
  
  if pshow == 1:
-  colorlog('DEBUG: start: {}, end: {}'.format(lstart_date, lend_date), 'info')
+  colorlog('get_last_month | DEBUG: start: {}, end: {}'.format(lstart_date, lend_date), 'info')
 
  return lstart_date, lend_date
 
@@ -46,7 +46,7 @@ def get_last_month() -> str:
 def get_today() -> str:
 
  if pshow == 1:
-  colorlog('DEBUG: {}'.format(date.today().isoformat()), 'info')
+  colorlog('get_today | DEBUG: {}'.format(date.today().isoformat()), 'info')
 
  return date.today().isoformat()
 
@@ -62,7 +62,7 @@ def get_total_cost_date_range(gstart=True, gend=True) -> str:
   end_date = gend  
 
  if pshow == 1:
-  colorlog('DEBUG: inicio: {}, final: {}'.format(start_date, end_date), 'info')
+  colorlog('get_total_cost_date_range | DEBUG: inicio: {}, final: {}'.format(start_date, end_date), 'info')
 
 #trata se a data inicial for a mesma da final (1º dia do mes)
  if start_date == end_date:
@@ -95,17 +95,20 @@ def get_total_billing(gstart=True, gend=True) -> dict:
  total_billing = round(float(response['ResultsByTime'][0]['Total']['AmortizedCost']['Amount']),2)
  
  if pshow == 1:
-  colorlog('DEBUG: StartTime: {}'.format(start_date), 'info')
-  colorlog('DEBUG: EndTime: {}'.format(end_date), 'info')
-  colorlog('DEBUG: TotalBilling: {}'.format(total_billing), 'info')
-  colorlog('DEBUG: reponse...', 'info')
+  colorlog('get_total_billing | DEBUG: StartTime: {}'.format(start_date), 'info')
+  colorlog('get_total_billing | DEBUG: EndTime: {}'.format(end_date), 'info')
+  colorlog('get_total_billing | DEBUG: TotalBilling: {}'.format(total_billing), 'info')
+  colorlog('get_total_billing | DEBUG: reponse...', 'info')
   pprint(response)
 
  return { 'total':{'total':total_billing } }
  
 @exception
-def get_service_billing() -> dict:
- start_date, end_date = get_total_cost_date_range()
+def get_service_billing(gstart=True, gend=True) -> dict:
+ if gstart == True:
+  start_date, end_date = get_total_cost_date_range()
+ else:
+  start_date, end_date = get_total_cost_date_range(str(gstart), str(gend))
  
  response = gconn.get_cost_and_usage(
   TimePeriod={
@@ -131,9 +134,9 @@ def get_service_billing() -> dict:
   services_billing[service['name']] = service
   
  if pshow == 1:
-  colorlog('DEBUG: response...', 'info')
+  colorlog('get_service_billing | DEBUG: response...', 'info')
   pprint(response)
-  colorlog('DEBUG: services...', 'info')
+  colorlog('get_service_billing | DEBUG: services...', 'info')
   pprint(services_billing)
 
  return services_billing
@@ -142,13 +145,16 @@ def get_service_billing() -> dict:
 def main_process(customer) -> dict:
  
  cur_total_billing = get_total_billing()
- #cur_service_billing = get_service_billing()
+ cur_service_billing = get_service_billing()
  
  lstart_date, lend_date = get_last_month()
+ 
  last_total_billing = get_total_billing(lstart_date, lend_date)
+ last_service_billing = get_service_billing(lstart_date, lend_date)
+  
 
- #for k, v in cur_service_billing.items():
-  #print(f"{customer},{start_date},{end_date},{k},{v['billing']},last,current")
+ for ck, cv in cur_service_billing.items():
+  print(f"{customer},{start_date},{end_date},{ck},{cv['billing']},{last_service_billing[ck]['billing']},same")
 
  for ck, cv in cur_total_billing.items():
   for lk, lv in last_total_billing.items():
